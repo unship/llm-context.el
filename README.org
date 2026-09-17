@@ -62,18 +62,29 @@ in.
 :CUSTOM_ID: org-mode
 :END:
 Org buffers keep the normal file reference, but add the surrounding Org
-outline path so the copied line has document context:
+outline path so the copied line has document context. The line number after
+each headline is the headline's actual line in the file, not a hierarchy ID.
+For this buffer:
 
 #+begin_example
-~/notes/design.org:42 — Project (line 1) / Architecture (line 2)
+1 * Project
+2 ** Architecture
+3 A design note.
+#+end_example
+
+Copying line 3 produces:
+
+#+begin_example
+~/notes/design.org:3 — Project (line 1) / Architecture (line 2)
 #+end_example
 
 When point is inside an Org source block, the complete block is copied and
-its actual language is used for the Markdown fence. For example, point on
-=print(42)= produces:
+its actual language is used for the Markdown fence. The current point line
+and headline definition lines remain separate. For example, with the source
+block beginning on line 3:
 
 #+begin_example
-~/notes/design.org:42 — Project (line 1) / Architecture (line 2)
+~/notes/design.org:3 — Project (line 1) / Architecture (line 2)
 
 #+begin_src python
 print(42)
@@ -81,8 +92,9 @@ print(42)
 #+end_example
 
 Selecting a region in an Org buffer keeps the normal selection behavior. The
-source-block behavior applies only when there is no active region; an
-over-limit source block is omitted unless a prefix argument is supplied.
+reference still includes the surrounding headline path and its definition
+lines. The source-block behavior applies only when there is no active region;
+an over-limit source block is omitted unless a prefix argument is supplied.
 
 ** Dired and Dirvish
 :PROPERTIES:
