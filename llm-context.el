@@ -36,6 +36,7 @@ With a prefix argument, include the selected text regardless of this limit."
     (compilation-mode . "text")
     (diff-mode . "diff")
     (emacs-lisp-mode . "emacs-lisp")
+    (eww-mode . "text")
     (gfm-mode . "markdown")
     (go-mode . "go")
     (go-ts-mode . "go")
@@ -254,7 +255,14 @@ line numbers survive.  Returns nil when point is not over any diff."
       (llm-context--copy-diff-ref)
       (llm-context--copy-compilation-ref)
       (llm-context--copy-xref-ref)
-      (llm-context--copy-occur-ref)))
+      (llm-context--copy-occur-ref)
+      (when (derived-mode-p 'Info-mode)
+        (format "info:%s#%s"
+                (or (bound-and-true-p Info-current-file) "*Info*")
+                (or (bound-and-true-p Info-current-node) "Top")))
+      (when (memq major-mode '(help-mode helpful-mode))
+        (format "help:%s"
+                (or (thing-at-point 'symbol t) (buffer-name))))))
 
 (defun llm-context--copy-region-lines ()
   "Return selected line range as (BEG . END), fixing end-at-BOL selections."
@@ -302,6 +310,10 @@ exceeds `llm-context-max-lines'."
                                 llm-context-max-lines)))
          (special-ref (llm-context--copy-special-ref))
          (eww-p (derived-mode-p 'eww-mode))
+         (selection-lines (when (use-region-p)
+                           (llm-context--copy-line-count
+                            (buffer-substring-no-properties
+                             (region-beginning) (region-end)))))
          (file (or (buffer-file-name)
                    (buffer-file-name (buffer-base-buffer))))
          (path (cond (dired-paths nil)
@@ -332,13 +344,12 @@ exceeds `llm-context-max-lines'."
            ((and magit-content-raw (not magit-omitted))
             (format "\n\n```diff\n%s```\n" magit-content-raw))
            ((and (not dired-paths)
-                 (not eww-p)
                  (not magit-p)
-                 (or special-ref line-count)
+                 (or special-ref line-count eww-p)
                  (or (not (use-region-p))
                      force-content
-                     (and line-count
-                          (<= line-count llm-context-max-lines))))
+                     (<= (or line-count selection-lines)
+                         llm-context-max-lines)))
             (let ((text (if (use-region-p)
                             (buffer-substring-no-properties
                              (region-beginning)
