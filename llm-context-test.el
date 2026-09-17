@@ -44,8 +44,8 @@
       (cl-letf (((symbol-function 'kill-new)
                  (lambda (value &rest _) (setq copied value))))
       (llm-context-copy))
-      (should (string-match-p
-               "https://example.test/page\\n\\n```text\\nselected article text\\n```"
+      (should (string-suffix-p
+               "https://example.test/page\n\n```text\nselected article text\n```\n"
                copied)))))
 
 ;;; llm-context-test.el ends here
