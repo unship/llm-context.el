@@ -7,6 +7,14 @@
 ;; Keywords: convenience, files, tools
 ;; URL: https://github.com/unship/llm-context.el
 
+;;; Commentary:
+
+;; Copy the current line, region, file, or tool result as LLM-friendly
+;; Markdown context.  Optional integrations with Dired, Magit, xref,
+;; compilation, occur, diff, and EWW are detected at runtime.
+
+;;; Code:
+
 (require 'cl-lib)
 (require 'dired)
 (require 'eieio)
