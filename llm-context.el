@@ -15,8 +15,6 @@
 
 ;;; Code:
 
-(require 'cl-lib)
-
 (defcustom llm-context-max-lines 100
   "Maximum selected lines to include inline in `llm-context-copy'.
 With a prefix argument, include the selected text regardless of this limit."
@@ -222,6 +220,7 @@ diff represents."
 
 (defun llm-context--copy-magit-hunks (section)
   "Return the list of hunk sections at or below SECTION."
+  (require 'cl-lib)
   (require 'eieio)
   (if (eq (slot-value section 'type) 'hunk)
       (list section)
