@@ -294,15 +294,28 @@ line numbers survive.  Returns nil when point is not over any diff."
                  (mapcar (lambda (mode)
                            (when (and (boundp mode) (symbol-value mode))
                              (symbol-name mode)))
-                         minor-mode-list))))
+                         minor-mode-list)))
+          (details
+           (delq nil
+                 (list
+                  (when (memq major-mode '(help-mode helpful-mode))
+                    (format "help-object: %s"
+                            (or (thing-at-point 'symbol t) "none")))
+                  (when (derived-mode-p 'Info-mode)
+                    (format "info-file: %s"
+                            (or (bound-and-true-p Info-current-file) "none")))
+                  (when (derived-mode-p 'Info-mode)
+                    (format "info-node: %s"
+                            (or (bound-and-true-p Info-current-node) "Top")))))))
       (format
-       "\n\n```emacs-context\ndaemon: %s\nbuffer: %s\nmajor-mode: %s\nminor-modes: %s\npoint: %d\nnarrowed: %s\n```\n"
+       "\n\n```emacs-context\ndaemon: %s\nbuffer: %s\nmajor-mode: %s\nminor-modes: %s\npoint: %d\nnarrowed: %s%s\n```\n"
        (or (daemonp) "none")
        (buffer-name)
        major-mode
        (if minor-modes (string-join minor-modes ", ") "none")
        (line-number-at-pos (point) t)
-       (if (buffer-narrowed-p) "yes" "no")))))
+       (if (buffer-narrowed-p) "yes" "no")
+       (if details (concat "\n" (string-join details "\n")) "")))))
 
 (defun llm-context--copy-emacs-context-buffer-p
     (file eww-p dired-paths special-ref magit-p)

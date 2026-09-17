@@ -228,6 +228,7 @@ major-mode: emacs-lisp-mode
 minor-modes: evil-local-mode, company-mode
 point: 18
 narrowed: no
+help-object: buffer-file-name
 ```
 ~~~~
 
