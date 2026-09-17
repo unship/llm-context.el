@@ -31,6 +31,14 @@ The maximum number of selected lines copied inline defaults to 100:
 
 Use a prefix argument to include an over-limit selection.
 
+Copied context also includes an `emacs-context` block by default, describing
+the daemon name (or `none` for a non-daemon Emacs), buffer, major/minor modes,
+point, and narrowing state. Disable it when needed:
+
+```elisp
+(setq llm-context-include-emacs-context nil)
+```
+
 ## License
 
 GPL-3.0-or-later.

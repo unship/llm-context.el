@@ -1,10 +1,10 @@
 ;;; llm-context.el --- Copy editor context for LLMs -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2026 Liyan An
-;; Author: Liyan An
+;; Copyright (C) 2026 Li yanan
+;; Author: Li yanan
 ;; Version: 0.1.0
 ;; Package-Requires: ((emacs "27.1"))
-;; Keywords: convenience, files, tools
+;; Keywords: convenience, files, tools, llm, agent, context
 ;; URL: https://github.com/unship/llm-context.el
 
 ;;; Commentary:
@@ -25,6 +25,13 @@
 With a prefix argument, include the selected text regardless of this limit."
   :type 'integer
   :group 'agent)
+
+(defcustom llm-context-include-emacs-context t
+  "Whether to append Emacs buffer metadata to copied context.
+The metadata includes the daemon name, buffer, major mode, active minor
+modes, point, and narrowing state."
+  :type 'boolean
+  :group 'llm-context)
 
 (defvar llm-context--copy-language-alist
   '((c-mode . "c")
@@ -279,6 +286,24 @@ line numbers survive.  Returns nil when point is not over any diff."
     (cons (line-number-at-pos beg-pos t)
           (line-number-at-pos last-pos t))))
 
+(defun llm-context--copy-emacs-context ()
+  "Return a compact description of the current Emacs buffer state."
+  (when llm-context-include-emacs-context
+    (let ((minor-modes
+           (delq nil
+                 (mapcar (lambda (mode)
+                           (when (and (boundp mode) (symbol-value mode))
+                             (symbol-name mode)))
+                         minor-mode-list))))
+      (format
+       "\n\n```emacs-context\ndaemon: %s\nbuffer: %s\nmajor-mode: %s\nminor-modes: %s\npoint: %d\nnarrowed: %s\n```\n"
+       (or (daemonp) "none")
+       (buffer-name)
+       major-mode
+       (if minor-modes (string-join minor-modes ", ") "none")
+       (line-number-at-pos (point) t)
+       (if (buffer-narrowed-p) "yes" "no")))))
+
 ;;;###autoload
 (defun llm-context-copy (&optional force-content)
   "Copy current line or selected region as LLM-friendly context.
@@ -311,9 +336,9 @@ exceeds `llm-context-max-lines'."
          (special-ref (llm-context--copy-special-ref))
          (eww-p (derived-mode-p 'eww-mode))
          (selection-lines (when (use-region-p)
-                           (llm-context--copy-line-count
-                            (buffer-substring-no-properties
-                             (region-beginning) (region-end)))))
+                            (llm-context--copy-line-count
+                             (buffer-substring-no-properties
+                              (region-beginning) (region-end)))))
          (file (or (buffer-file-name)
                    (buffer-file-name (buffer-base-buffer))))
          (path (cond (dired-paths nil)
@@ -359,7 +384,8 @@ exceeds `llm-context-max-lines'."
                            (line-end-position))))
                   (lang (llm-context--copy-language)))
               (format "\n\n```%s\n%s\n```\n" lang text))))))
-    (kill-new (concat ref (or content "")))
+    (kill-new (concat ref (or content "")
+                      (or (llm-context--copy-emacs-context) "")))
     (message "Copied LLM context: %s%s" ref
              (cond (magit-omitted
                     (format " (diff omitted: %d lines > %d; C-u to include)"

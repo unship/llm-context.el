@@ -9,6 +9,14 @@
     (emacs-lisp-mode)
     (should (equal (llm-context--copy-language) "emacs-lisp"))))
 
+(ert-deftest llm-context-test-emacs-context-includes-daemon ()
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (cl-letf (((symbol-function 'daemonp) (lambda () "test-daemon")))
+      (let ((context (llm-context--copy-emacs-context)))
+        (should (string-match-p "daemon: test-daemon" context))
+        (should (string-match-p "major-mode: emacs-lisp-mode" context))))))
+
 (ert-deftest llm-context-test-region-lines-end-at-bol ()
   (with-temp-buffer
     (insert "one\ntwo\nthree\n")
@@ -26,9 +34,8 @@
           (cl-letf (((symbol-function 'kill-new)
                      (lambda (value &rest _) (setq copied value))))
             (llm-context-copy))
-          (should (string-suffix-p
-                   ":1\n\n```emacs-lisp\n(message \"hi\")\n```\n"
-                   copied)))
+          (should (string-match-p ":1\n\n```emacs-lisp" copied))
+          (should (string-match-p "```emacs-context" copied)))
       (delete-file file))))
 
 (ert-deftest llm-context-test-eww-region-includes-text ()
@@ -44,8 +51,9 @@
       (cl-letf (((symbol-function 'kill-new)
                  (lambda (value &rest _) (setq copied value))))
       (llm-context-copy))
-      (should (string-suffix-p
+      (should (string-prefix-p
                "https://example.test/page\n\n```text\nselected article text\n```\n"
-               copied)))))
+               copied))
+      (should (string-match-p "daemon: none" copied)))))
 
 ;;; llm-context-test.el ends here
