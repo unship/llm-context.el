@@ -35,16 +35,17 @@
   (with-temp-buffer
     (eww-mode)
     (setq eww-current-url "https://example.test/page")
-    (insert "selected article text")
+    (let ((inhibit-read-only t))
+      (insert "selected article text"))
     (set-mark (point-min))
     (goto-char (point-max))
     (activate-mark)
     (let (copied)
       (cl-letf (((symbol-function 'kill-new)
                  (lambda (value &rest _) (setq copied value))))
-        (llm-context-copy))
+      (llm-context-copy))
       (should (string-match-p
-               "https://example.test/page:1-1\\n\\n```text\\nselected article text\\n```"
+               "https://example.test/page\\n\\n```text\\nselected article text\\n```"
                copied)))))
 
 ;;; llm-context-test.el ends here
