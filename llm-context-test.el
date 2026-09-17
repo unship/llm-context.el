@@ -80,7 +80,7 @@
             (cl-letf (((symbol-function 'kill-new)
                        (lambda (value &rest _) (setq copied value))))
             (llm-context-copy))
-            (should (string-match-p "Project \\[L1\\] / Architecture \\[L2\\]"
+            (should (string-match-p "Project (line 1) / Architecture (line 2)"
                                     copied))
             (should (string-match-p "```python\nprint(42)" copied))))
       (delete-file file))))

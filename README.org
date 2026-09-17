@@ -65,7 +65,7 @@ Org buffers keep the normal file reference, but add the surrounding Org
 outline path so the copied line has document context:
 
 #+begin_example
-~/notes/design.org:42 — Project [L1] / Architecture [L2]
+~/notes/design.org:42 — Project (line 1) / Architecture (line 2)
 #+end_example
 
 When point is inside an Org source block, the complete block is copied and
@@ -73,7 +73,7 @@ its actual language is used for the Markdown fence. For example, point on
 =print(42)= produces:
 
 #+begin_example
-~/notes/design.org:42 — Project [L1] / Architecture [L2]
+~/notes/design.org:42 — Project (line 1) / Architecture (line 2)
 
 #+begin_src python
 print(42)

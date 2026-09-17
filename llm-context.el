@@ -150,9 +150,9 @@ modes, point, and narrowing state."
            (heading
            (save-excursion
               (org-back-to-heading t)
-              (let (path continue)
-                (while (or (null continue) continue)
-                  (push (format "%s [L%d]"
+              (let ((continue t) path)
+                (while continue
+                  (push (format "%s (line %d)"
                                 (org-get-heading t t t t)
                                 (line-number-at-pos (point) t))
                         path)
