@@ -75,7 +75,7 @@ For this buffer:
 Copying line 3 produces:
 
 #+begin_example
-~/notes/design.org:3 — Project (line 1) / Architecture (line 2)
+~/notes/design.org:3 — Project (lines 1-3) / Architecture (lines 2-3)
 #+end_example
 
 When point is inside an Org source block, the complete block is copied and
@@ -84,7 +84,7 @@ and headline definition lines remain separate. For example, with the source
 block beginning on line 3:
 
 #+begin_example
-~/notes/design.org:3 — Project (line 1) / Architecture (line 2)
+~/notes/design.org:3 — Project (lines 1-3) / Architecture (lines 2-3)
 
 #+begin_src python
 print(42)

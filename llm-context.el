@@ -152,10 +152,20 @@ modes, point, and narrowing state."
               (org-back-to-heading t)
               (let ((continue t) path)
                 (while continue
-                  (push (format "%s (line %d)"
-                                (org-get-heading t t t t)
-                                (line-number-at-pos (point) t))
-                        path)
+                  (let* ((element (org-element-at-point))
+                         (begin (or (org-element-property :begin element)
+                                    (point)))
+                         (end (or (org-element-property :end element)
+                                  (line-end-position)))
+                         (start-line (line-number-at-pos begin t))
+                         (end-line
+                          (save-excursion
+                            (goto-char (max begin (1- end)))
+                            (line-number-at-pos (point) t))))
+                    (push (format "%s (lines %d-%d)"
+                                  (org-get-heading t t t t)
+                                  start-line end-line)
+                          path))
                   (setq continue (org-up-heading-safe)))
                 path))))
       (format "%s:%d%s"
