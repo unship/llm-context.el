@@ -16,9 +16,6 @@
 ;;; Code:
 
 (require 'cl-lib)
-(require 'dired)
-(require 'eieio)
-(require 'seq)
 
 (defcustom llm-context-max-lines 100
   "Maximum selected lines to include inline in `llm-context-copy'.
@@ -97,6 +94,7 @@ modes, point, and narrowing state."
 (defun llm-context--copy-dired-paths ()
   "Return marked dired/dirvish files, or the file at point."
   (when (derived-mode-p 'dired-mode)
+    (require 'dired)
     (or (ignore-errors (dired-get-marked-files nil nil))
         (list default-directory))))
 
@@ -181,6 +179,7 @@ standalone diff buffers, else nil."
   (or (let ((section (and (fboundp 'magit-current-section)
                           (magit-current-section)))
             found)
+        (require 'eieio)
         (while (and section (not found))
           (when (memq (slot-value section 'type) '(staged unstaged untracked))
             (setq found (slot-value section 'type)))
@@ -223,6 +222,7 @@ diff represents."
 
 (defun llm-context--copy-magit-hunks (section)
   "Return the list of hunk sections at or below SECTION."
+  (require 'eieio)
   (if (eq (slot-value section 'type) 'hunk)
       (list section)
     (mapcan #'llm-context--copy-magit-hunks
@@ -234,6 +234,7 @@ With an active region include every hunk it overlaps; otherwise include
 the hunk(s) under the section at point.  Each hunk keeps its @@ header so
 line numbers survive.  Returns nil when point is not over any diff."
   (when (derived-mode-p 'magit-mode)
+    (require 'seq)
     (let* ((root (bound-and-true-p magit-root-section))
            (hunks
             (cond
