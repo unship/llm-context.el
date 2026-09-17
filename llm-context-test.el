@@ -35,7 +35,7 @@
                      (lambda (value &rest _) (setq copied value))))
             (llm-context-copy))
           (should (string-match-p ":1\n\n```emacs-lisp" copied))
-          (should (string-match-p "```emacs-context" copied)))
+          (should-not (string-match-p "```emacs-context" copied)))
       (delete-file file))))
 
 (ert-deftest llm-context-test-eww-region-includes-text ()
@@ -54,6 +54,18 @@
       (should (string-prefix-p
                "https://example.test/page\n\n```text\nselected article text\n```\n"
                copied))
-      (should (string-match-p "daemon: none" copied)))))
+      (should-not (string-match-p "```emacs-context" copied)))))
+
+(ert-deftest llm-context-test-temporary-buffer-uses-emacs-context ()
+  (with-temp-buffer
+    (insert "A helpful temporary buffer")
+    (help-mode)
+    (goto-char (point-min))
+    (let (copied)
+      (cl-letf (((symbol-function 'kill-new)
+                 (lambda (value &rest _) (setq copied value))))
+        (llm-context-copy))
+      (should (string-prefix-p "emacs-context:" copied))
+      (should (string-match-p "```emacs-context" copied)))))
 
 ;;; llm-context-test.el ends here

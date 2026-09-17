@@ -22,7 +22,7 @@ With a prefix argument, include the selected text regardless of this limit."
   :group 'agent)
 
 (defcustom llm-context-include-emacs-context t
-  "Whether to append Emacs buffer metadata to copied context.
+  "Whether to include Emacs buffer metadata for temporary buffers.
 The metadata includes the daemon name, buffer, major mode, active minor
 modes, point, and narrowing state."
   :type 'boolean
@@ -304,6 +304,21 @@ line numbers survive.  Returns nil when point is not over any diff."
        (line-number-at-pos (point) t)
        (if (buffer-narrowed-p) "yes" "no")))))
 
+(defun llm-context--copy-emacs-context-buffer-p
+    (file eww-p dired-paths special-ref magit-p)
+  "Return non-file, non-web buffers that should use Emacs context."
+  (and (not file)
+       (not eww-p)
+       (not dired-paths)
+       (not magit-p)
+       (or (memq major-mode
+                 '(help-mode helpful-mode Info-mode shell-mode eshell-mode
+                   term-mode comint-mode messages-buffer-mode debugger-mode
+                   backtrace-mode Man-mode woman-mode package-menu-mode
+                   ibuffer-mode tabulated-list-mode vc-dir-mode
+                   org-agenda-mode calendar-mode))
+           (not special-ref))))
+
 ;;;###autoload
 (defun llm-context-copy (&optional force-content)
   "Copy current line or selected region as LLM-friendly context.
@@ -341,7 +356,11 @@ exceeds `llm-context-max-lines'."
                               (region-beginning) (region-end)))))
          (file (or (buffer-file-name)
                    (buffer-file-name (buffer-base-buffer))))
+         (emacs-context-p
+          (llm-context--copy-emacs-context-buffer-p
+           file eww-p dired-paths special-ref magit-p))
          (path (cond (dired-paths nil)
+                     (emacs-context-p nil)
                      (special-ref nil)
                      (eww-p (or (plist-get (bound-and-true-p eww-data) :url)
                                 (bound-and-true-p eww-current-url)
@@ -358,6 +377,7 @@ exceeds `llm-context-max-lines'."
          (ref (cond
                (dired-paths
                 (mapconcat #'llm-context--copy-abbrev-path dired-paths "\n"))
+               (emacs-context-p (format "emacs-context:%s" (buffer-name)))
                (special-ref special-ref)
                ((and line-range (= (car line-range) (cdr line-range)))
                 (format "%s:%d" path (car line-range)))
@@ -370,7 +390,7 @@ exceeds `llm-context-max-lines'."
             (format "\n\n```diff\n%s```\n" magit-content-raw))
            ((and (not dired-paths)
                  (not magit-p)
-                 (or special-ref line-count eww-p)
+                 (or special-ref line-count eww-p emacs-context-p)
                  (or (not (use-region-p))
                      force-content
                      (<= (or line-count selection-lines)
@@ -385,7 +405,9 @@ exceeds `llm-context-max-lines'."
                   (lang (llm-context--copy-language)))
               (format "\n\n```%s\n%s\n```\n" lang text))))))
     (kill-new (concat ref (or content "")
-                      (or (llm-context--copy-emacs-context) "")))
+                      (if emacs-context-p
+                          (or (llm-context--copy-emacs-context) "")
+                        "")))
     (message "Copied LLM context: %s%s" ref
              (cond (magit-omitted
                     (format " (diff omitted: %d lines > %d; C-u to include)"

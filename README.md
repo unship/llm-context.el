@@ -2,8 +2,9 @@
 
 Copy Emacs context in a format useful to LLM coding tools.
 
-`M-x llm-context-copy` copies a reference, optional source text, and (by default)
-an `emacs-context` block describing the current Emacs state.
+`M-x llm-context-copy` copies a reference and optional source text. For
+temporary, non-file, non-web buffers it uses an `emacs-context` reference and
+adds a block describing the current Emacs state.
 
 ## Installation
 
@@ -33,14 +34,6 @@ Run `M-x llm-context-copy` with point on one line:
 (message "hello")
 ```
 
-```emacs-context
-daemon: doom
-buffer: app.el
-major-mode: emacs-lisp-mode
-minor-modes: ...
-point: 42
-narrowed: no
-```
 ~~~~
 
 Select lines 10 through 14 to copy a range:
@@ -53,12 +46,6 @@ def answer():
     return 42
 ```
 
-```emacs-context
-daemon: doom
-buffer: app.py
-major-mode: python-mode
-...
-```
 ~~~~
 
 Selections ending at the beginning of the next line exclude that next line.
@@ -73,12 +60,6 @@ With files marked, each path is copied on its own line:
 ~/src/app.el
 ~/src/lib/util.py
 
-```emacs-context
-daemon: doom
-buffer: *Dired*
-major-mode: dired-mode
-...
-```
 ~~~~
 
 With no marks, the file at point is copied. If point is not on a file, the
@@ -86,17 +67,10 @@ current directory is copied.
 
 ## EWW
 
-Without a region, EWW copies only the URL plus Emacs metadata:
+Without a region, EWW copies only the URL:
 
 ~~~~text
 https://example.com/article
-
-```emacs-context
-daemon: doom
-buffer: *eww*
-major-mode: eww-mode
-...
-```
 ~~~~
 
 With text selected in the rendered page, it copies the URL and selected text:
@@ -108,12 +82,6 @@ https://example.com/article
 The selected paragraph from the page.
 ```
 
-```emacs-context
-daemon: doom
-buffer: *eww*
-major-mode: eww-mode
-...
-```
 ~~~~
 
 ## Magit
@@ -129,12 +97,6 @@ At a Magit hunk, it copies a unified diff and its source reference:
 +new value
 ```
 
-```emacs-context
-daemon: doom
-buffer: *magit: project*
-major-mode: magit-status-mode
-...
-```
 ~~~~
 
 Staged and untracked files use `(staged)` and `(untracked)`. A commit view
@@ -167,17 +129,17 @@ raise ParseError(token)
 ~~~~
 
 If no source location is available, the command falls back to the result
-buffer name plus its current line or selected region.
+buffer's `emacs-context` reference and its current line or selected region.
 
 ## Help and documentation
 
 ### help-mode and helpful-mode
 
-The symbol at point becomes the reference, and the current line (or selection)
-is copied:
+These are temporary, non-file buffers, so the reference uses Emacs context.
+The symbol at point and its current line (or selection) are copied:
 
 ~~~~text
-help:buffer-file-name
+emacs-context:*Help*
 
 ```text
 Return the file name of the current buffer, or nil.
@@ -186,10 +148,11 @@ Return the file name of the current buffer, or nil.
 
 ### Info-mode
 
-The current Info file and node become the reference:
+Info uses an Emacs context reference while preserving the current Info file
+and node in the buffer state:
 
 ~~~~text
-info:elisp#Buffers
+emacs-context:*info*
 
 ```text
 Buffers are objects that hold text to be edited.
@@ -198,10 +161,10 @@ Buffers are objects that hold text to be edited.
 
 ### Man-mode and woman-mode
 
-The manual buffer name is used as the reference:
+The manual page is a temporary buffer, so it uses Emacs context:
 
 ~~~~text
-*Man git-commit*:12
+emacs-context:*Man git-commit*
 
 ```text
 git commit - Record changes to the repository
@@ -210,22 +173,23 @@ git commit - Record changes to the repository
 
 ## Shell and status buffers
 
-`shell-mode`, `eshell-mode`, `term-mode`, and `comint-mode` copy the current
-command/output line or selected region:
+`shell-mode`, `eshell-mode`, `term-mode`, and `comint-mode` use an
+`emacs-context` reference and copy the current command/output line or selected
+region:
 
 ~~~~text
-*shell*:18
+emacs-context:*shell*
 
 ```sh
 git status --short
 ```
 ~~~~
 
-`messages-buffer-mode`, `debugger-mode`, and `backtrace-mode` use the same
-current-line/region behavior:
+`messages-buffer-mode`, `debugger-mode`, and `backtrace-mode` use an
+`emacs-context` reference and copy the current line or selection:
 
 ~~~~text
-*Backtrace*:7
+emacs-context:*Backtrace*
 
 ```text
   my-function(arg)
@@ -233,11 +197,11 @@ current-line/region behavior:
 ~~~~
 
 `package-menu-mode`, `ibuffer-mode`, `tabulated-list-mode`, `vc-dir-mode`,
-`org-agenda-mode`, and `calendar-mode` copy the current row/entry or selected
-region using the buffer name and line range:
+`org-agenda-mode`, and `calendar-mode` also use an `emacs-context` reference
+and copy the current row/entry or selected region:
 
 ~~~~text
-*Packages*:23-24
+emacs-context:*Packages*
 
 ```text
 U  magit   4.3.0   A Git porcelain inside Emacs
@@ -247,10 +211,16 @@ U  gptel   0.9.8   A large language model chat client
 
 ## Emacs internal context
 
-Every copy can include this compact state block, even when the buffer has no
-file:
+For a temporary, non-file, non-web buffer such as `helpful-mode`, the
+reference is an Emacs context instead of a fake `buffer:line` path:
 
 ~~~~text
+emacs-context:*Help*
+
+```text
+describe-variable: buffer-file-name
+```
+
 ```emacs-context
 daemon: doom
 buffer: *scratch*
@@ -278,4 +248,3 @@ reference and source text are wanted:
 ## License
 
 GPL-3.0-or-later.
-
