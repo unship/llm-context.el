@@ -139,6 +139,31 @@ modes, point, and narrowing state."
     (llm-context--copy-marker-ref
      (get-text-property (point) 'occur-target))))
 
+(defun llm-context--copy-org-ref ()
+  "Return an Org file reference with its outline path."
+  (when (and (derived-mode-p 'org-mode)
+             (or (buffer-file-name)
+                 (buffer-file-name (buffer-base-buffer))))
+    (require 'org)
+    (let* ((file (or (buffer-file-name)
+                     (buffer-file-name (buffer-base-buffer))))
+           (heading (ignore-errors (org-get-outline-path t t))))
+      (format "%s:%d%s"
+              (llm-context--copy-abbrev-path file)
+              (line-number-at-pos (point) t)
+              (if heading
+                  (format " — %s" (string-join heading " / "))
+                "")))))
+
+(defun llm-context--copy-org-content ()
+  "Return `(LANG . TEXT)' when point is inside an Org source block."
+  (when (derived-mode-p 'org-mode)
+    (require 'org-element)
+    (let ((element (org-element-context)))
+      (when (eq (org-element-type element) 'src-block)
+        (cons (or (org-element-property :language element) "text")
+              (or (org-element-property :value element) ""))))))
+
 (defun llm-context--copy-diff-ref ()
   "Return source reference at point in plain diff buffers."
   (when (and (derived-mode-p 'diff-mode)
@@ -263,6 +288,7 @@ line numbers survive.  Returns nil when point is not over any diff."
       (llm-context--copy-compilation-ref)
       (llm-context--copy-xref-ref)
       (llm-context--copy-occur-ref)
+      (llm-context--copy-org-ref)
       (when (derived-mode-p 'Info-mode)
         (format "info:%s#%s"
                 (or (bound-and-true-p Info-current-file) "*Info*")
@@ -363,6 +389,7 @@ exceeds `llm-context-max-lines'."
                                 llm-context-max-lines)))
          (special-ref (llm-context--copy-special-ref))
          (eww-p (derived-mode-p 'eww-mode))
+         (org-content (llm-context--copy-org-content))
          (selection-lines (when (use-region-p)
                             (llm-context--copy-line-count
                              (buffer-substring-no-properties
@@ -401,6 +428,12 @@ exceeds `llm-context-max-lines'."
           (cond
            ((and magit-content-raw (not magit-omitted))
             (format "\n\n```diff\n%s```\n" magit-content-raw))
+           ((and org-content
+                 (or force-content
+                     (<= (llm-context--copy-line-count (cdr org-content))
+                         llm-context-max-lines)))
+            (format "\n\n```%s\n%s\n```\n"
+                    (car org-content) (cdr org-content)))
            ((and (not dired-paths)
                  (not magit-p)
                  (or special-ref line-count eww-p emacs-context-p)

@@ -68,4 +68,20 @@
       (should (string-prefix-p "emacs-context:" copied))
       (should (string-match-p "```emacs-context" copied)))))
 
+(ert-deftest llm-context-test-org-source-block-context ()
+  (let ((file (make-temp-file "llm-context-test" nil ".org")))
+    (unwind-protect
+        (with-current-buffer (find-file-noselect file)
+          (org-mode)
+          (insert "* Project\n** Architecture\n#+begin_src python\nprint(42)\n#+end_src\n")
+          (goto-char (point-min))
+          (search-forward "print")
+          (let (copied)
+            (cl-letf (((symbol-function 'kill-new)
+                       (lambda (value &rest _) (setq copied value))))
+              (llm-context-copy))
+            (should (string-match-p "Architecture" copied))
+            (should (string-match-p "```python\nprint(42)" copied))))
+      (delete-file file))))
+
 ;;; llm-context-test.el ends here

@@ -57,6 +57,33 @@ line. Selections longer than =llm-context-max-lines= (100 by default)
 omit the source block. Use =C-u M-x llm-context-copy= to force it back
 in.
 
+** Org-mode
+:PROPERTIES:
+:CUSTOM_ID: org-mode
+:END:
+Org buffers keep the normal file reference, but add the surrounding Org
+outline path so the copied line has document context:
+
+#+begin_example
+~/notes/design.org:42 — Project / Architecture
+#+end_example
+
+When point is inside an Org source block, the complete block is copied and
+its actual language is used for the Markdown fence. For example, point on
+=print(42)= produces:
+
+#+begin_example
+~/notes/design.org:42 — Project / Architecture
+
+#+begin_src python
+print(42)
+#+end_src
+#+end_example
+
+Selecting a region in an Org buffer keeps the normal selection behavior. The
+source-block behavior applies only when there is no active region; an
+over-limit source block is omitted unless a prefix argument is supplied.
+
 ** Dired and Dirvish
 :PROPERTIES:
 :CUSTOM_ID: dired-and-dirvish
