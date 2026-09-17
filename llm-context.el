@@ -157,7 +157,8 @@ modes, point, and narrowing state."
 
 (defun llm-context--copy-org-content ()
   "Return `(LANG . TEXT)' when point is inside an Org source block."
-  (when (derived-mode-p 'org-mode)
+  (when (and (derived-mode-p 'org-mode)
+             (not (use-region-p)))
     (require 'org-element)
     (let ((element (org-element-context)))
       (when (eq (org-element-type element) 'src-block)
@@ -436,6 +437,7 @@ exceeds `llm-context-max-lines'."
                     (car org-content) (cdr org-content)))
            ((and (not dired-paths)
                  (not magit-p)
+                 (not org-content)
                  (or special-ref line-count eww-p emacs-context-p)
                  (or (not (use-region-p))
                      force-content
