@@ -148,16 +148,15 @@ modes, point, and narrowing state."
     (let* ((file (or (buffer-file-name)
                      (buffer-file-name (buffer-base-buffer))))
            (heading
-            (save-excursion
+           (save-excursion
               (org-back-to-heading t)
-              (let (path)
-                (while (org-at-heading-p)
+              (let (path continue)
+                (while (or (null continue) continue)
                   (push (format "%s [L%d]"
                                 (org-get-heading t t t t)
                                 (line-number-at-pos (point) t))
                         path)
-                  (unless (org-up-heading-safe)
-                    (goto-char (point-min))))
+                  (setq continue (org-up-heading-safe)))
                 path))))
       (format "%s:%d%s"
               (llm-context--copy-abbrev-path file)
