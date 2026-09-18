@@ -3,7 +3,7 @@
 ;; Copyright (C) 2026 Li yanan
 ;; Author: Li yanan
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "27.1"))
+;; Package-Requires: ((emacs "30.1"))
 ;; Keywords: convenience, files, tools, llm, agent, context
 ;; URL: https://github.com/unship/llm-context.el
 
@@ -15,20 +15,24 @@
 
 ;;; Code:
 
+(defgroup llm-context nil
+  "Copy editor context for LLMs."
+  :group 'tools
+  :prefix "llm-context-")
+
 (defcustom llm-context-max-lines 100
   "Maximum selected lines to include inline in `llm-context-copy'.
 With a prefix argument, include the selected text regardless of this limit."
   :type 'integer
-  :group 'agent)
+  :group 'llm-context)
 
-(defcustom llm-context-include-emacs-context t
-  "Whether to include Emacs buffer metadata for temporary buffers.
-The metadata includes the daemon name, buffer, major mode, active minor
-modes, point, and narrowing state."
+(defcustom llm-context-copy-tramp-prefix nil
+  "Whether copied remote paths keep their TRAMP machine prefix.
+When nil, `llm-context-copy' copies only the path on the remote machine."
   :type 'boolean
   :group 'llm-context)
 
-(defvar llm-context--copy-language-alist
+(defcustom llm-context-copy-language-alist
   '((c-mode . "c")
     (c++-mode . "cpp")
     (c++-ts-mode . "cpp")
@@ -70,17 +74,29 @@ modes, point, and narrowing state."
     (xref--xref-buffer-mode . "text")
     (yaml-mode . "yaml")
     (yaml-ts-mode . "yaml"))
-  "Major-mode to Markdown fence language mapping for LLM context snippets.")
+  "Major-mode to Markdown fence language mapping for LLM context snippets.
+The value for each mode is used as the language name in the Markdown fence."
+  :type '(alist :key-type symbol :value-type string)
+  :group 'llm-context)
 
 (defun llm-context--copy-abbrev-path (path)
   "Return PATH abbreviated for copying into LLM context."
-  (if (and path (file-name-absolute-p path))
-      (abbreviate-file-name path)
-    path))
+  (cond
+   ((null path) nil)
+   ;; A remote file name is meaningful to Emacs, but the machine prefix is
+   ;; usually not useful to the recipient of copied context.  `file-local-name'
+   ;; also handles TRAMP methods which use an RPC transport.
+   ((file-remote-p path)
+    (if llm-context-copy-tramp-prefix
+        path
+      (file-local-name path)))
+   ((file-name-absolute-p path)
+    (abbreviate-file-name path))
+   (t path)))
 
 (defun llm-context--copy-language ()
   "Return a Markdown fence language for the current buffer."
-  (or (alist-get major-mode llm-context--copy-language-alist)
+  (or (alist-get major-mode llm-context-copy-language-alist)
       (let ((name (symbol-name major-mode)))
         (cond
          ((string-match "\\`\\(.+\\)-ts-mode\\'" name)
@@ -148,7 +164,7 @@ modes, point, and narrowing state."
     (let* ((file (or (buffer-file-name)
                      (buffer-file-name (buffer-base-buffer))))
            (heading
-           (save-excursion
+            (save-excursion
               (org-back-to-heading t)
               (let ((continue t) path)
                 (while continue
@@ -333,36 +349,11 @@ line numbers survive.  Returns nil when point is not over any diff."
     (cons (line-number-at-pos beg-pos t)
           (line-number-at-pos last-pos t))))
 
-(defun llm-context--copy-emacs-context ()
-  "Return a compact description of the current Emacs buffer state."
-  (when llm-context-include-emacs-context
-    (let ((minor-modes
-           (delq nil
-                 (mapcar (lambda (mode)
-                           (when (and (boundp mode) (symbol-value mode))
-                             (symbol-name mode)))
-                         minor-mode-list)))
-          (details
-           (delq nil
-                 (list
-                  (when (memq major-mode '(help-mode helpful-mode))
-                    (format "help-object: %s"
-                            (or (thing-at-point 'symbol t) "none")))
-                  (when (derived-mode-p 'Info-mode)
-                    (format "info-file: %s"
-                            (or (bound-and-true-p Info-current-file) "none")))
-                  (when (derived-mode-p 'Info-mode)
-                    (format "info-node: %s"
-                            (or (bound-and-true-p Info-current-node) "Top")))))))
-      (format
-       "\n\n```emacs-context\ndaemon: %s\nbuffer: %s\nmajor-mode: %s\nminor-modes: %s\npoint: %d\nnarrowed: %s%s\n```\n"
-       (or (daemonp) "none")
-       (buffer-name)
-       major-mode
-       (if minor-modes (string-join minor-modes ", ") "none")
-       (line-number-at-pos (point) t)
-       (if (buffer-narrowed-p) "yes" "no")
-       (if details (concat "\n" (string-join details "\n")) "")))))
+(defun llm-context--copy-emacs-context-reference ()
+  "Return a reference for the current temporary Emacs buffer."
+  (format "emacs-context:%s:%s"
+          (or (daemonp) "none")
+          (buffer-name)))
 
 (defun llm-context--copy-emacs-context-buffer-p
     (file eww-p dired-paths special-ref magit-p)
@@ -438,7 +429,7 @@ exceeds `llm-context-max-lines'."
          (ref (cond
                (dired-paths
                 (mapconcat #'llm-context--copy-abbrev-path dired-paths "\n"))
-               (emacs-context-p (format "emacs-context:%s" (buffer-name)))
+               (emacs-context-p (llm-context--copy-emacs-context-reference))
                (special-ref special-ref)
                ((and line-range (= (car line-range) (cdr line-range)))
                 (format "%s:%d" path (car line-range)))
@@ -472,10 +463,7 @@ exceeds `llm-context-max-lines'."
                            (line-end-position))))
                   (lang (llm-context--copy-language)))
               (format "\n\n```%s\n%s\n```\n" lang text))))))
-    (kill-new (concat ref (or content "")
-                      (if emacs-context-p
-                          (or (llm-context--copy-emacs-context) "")
-                        "")))
+    (kill-new (concat ref (or content "")))
     (message "Copied LLM context: %s%s" ref
              (cond (magit-omitted
                     (format " (diff omitted: %d lines > %d; C-u to include)"

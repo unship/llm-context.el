@@ -195,7 +195,7 @@ context. The symbol at point and its current line (or selection) are
 copied:
 
 #+begin_src text
-emacs-context:*Help*
+emacs-context:doom:*Help*
 
 ```text
 Return the file name of the current buffer, or nil.
@@ -210,7 +210,7 @@ Info uses an Emacs context reference while preserving the current Info
 file and node in the buffer state:
 
 #+begin_src text
-emacs-context:*info*
+emacs-context:doom:*info*
 
 ```text
 Buffers are objects that hold text to be edited.
@@ -224,7 +224,7 @@ Buffers are objects that hold text to be edited.
 The manual page is a temporary buffer, so it uses Emacs context:
 
 #+begin_src text
-emacs-context:*Man git-commit*
+emacs-context:doom:*Man git-commit*
 
 ```text
 git commit - Record changes to the repository
@@ -240,7 +240,7 @@ git commit - Record changes to the repository
 selected region:
 
 #+begin_src text
-emacs-context:*shell*
+emacs-context:doom:*shell*
 
 ```sh
 git status --short
@@ -251,7 +251,7 @@ git status --short
 =emacs-context= reference and copy the current line or selection:
 
 #+begin_src text
-emacs-context:*Backtrace*
+emacs-context:doom:*Backtrace*
 
 ```text
   my-function(arg)
@@ -264,7 +264,7 @@ emacs-context:*Backtrace*
 region:
 
 #+begin_src text
-emacs-context:*Packages*
+emacs-context:doom:*Packages*
 
 ```text
 U  magit   4.3.0   A Git porcelain inside Emacs
@@ -277,33 +277,21 @@ U  gptel   0.9.8   A large language model chat client
 :CUSTOM_ID: emacs-internal-context
 :END:
 For a temporary, non-file, non-web buffer such as =helpful-mode=, the
-reference is an Emacs context instead of a fake =buffer:line= path:
+reference is an Emacs context instead of a fake =buffer:line= path.  The
+daemon name is encoded directly in the reference:
 
 #+begin_src text
-emacs-context:*Help*
+emacs-context:doom:*Help*
 
 ```text
 describe-variable: buffer-file-name
 ```
 
-```emacs-context
-daemon: doom
-buffer: *scratch*
-major-mode: emacs-lisp-mode
-minor-modes: evil-local-mode, company-mode
-point: 18
-narrowed: no
-help-object: buffer-file-name
-```
 #+end_src
 
 The daemon value comes from =daemonp=: it is the daemon name for a
-daemon client, and =none= for a regular Emacs process. Disable the block
-if only the reference and source text are wanted:
-
-#+begin_src elisp
-(setq llm-context-include-emacs-context nil)
-#+end_src
+daemon client, and =none= for a regular Emacs process.  No separate
+metadata block is added.
 
 ** Configuration
 :PROPERTIES:

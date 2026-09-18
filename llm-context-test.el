@@ -9,13 +9,47 @@
     (emacs-lisp-mode)
     (should (equal (llm-context--copy-language) "emacs-lisp"))))
 
-(ert-deftest llm-context-test-emacs-context-includes-daemon ()
+(ert-deftest llm-context-test-copy-path-removes-tramp-machine-prefix ()
+  (let ((llm-context-copy-tramp-prefix nil))
+    (should (equal (llm-context--copy-abbrev-path
+                    "/ssh:user@example.test:/srv/project/main.el")
+                   "/srv/project/main.el"))
+    ;; `rpc' is the TRAMP method used by the RPC transport.
+    (should (equal (llm-context--copy-abbrev-path
+                    "/rpc:machine:/srv/project/main.el")
+                   "/srv/project/main.el"))))
+
+(ert-deftest llm-context-test-copy-path-can-keep-tramp-machine-prefix ()
+  (let ((llm-context-copy-tramp-prefix t))
+    (should (equal (llm-context--copy-abbrev-path
+                    "/rpc:machine:/srv/project/main.el")
+                   "/rpc:machine:/srv/project/main.el"))))
+
+(ert-deftest llm-context-test-copy-tramp-file-line ()
   (with-temp-buffer
+    (insert "(message \"hi\")\n")
     (emacs-lisp-mode)
+    (setq buffer-file-name "/rpc:machine:/srv/project/main.el")
+    (goto-char (point-min))
+    (let (copied)
+      (cl-letf (((symbol-function 'kill-new)
+                 (lambda (value &rest _) (setq copied value))))
+        (llm-context-copy))
+      (should (string-prefix-p "/srv/project/main.el:1" copied))
+      (should-not (string-match-p "machine" copied)))))
+
+(ert-deftest llm-context-test-emacs-context-reference-includes-daemon ()
+  (with-temp-buffer
+    (insert "A helpful temporary buffer")
+    (help-mode)
+    (goto-char (point-min))
     (cl-letf (((symbol-function 'daemonp) (lambda () "test-daemon")))
-      (let ((context (llm-context--copy-emacs-context)))
-        (should (string-match-p "daemon: test-daemon" context))
-        (should (string-match-p "major-mode: emacs-lisp-mode" context))))))
+      (let (copied)
+        (cl-letf (((symbol-function 'kill-new)
+                   (lambda (value &rest _) (setq copied value))))
+          (llm-context-copy))
+        (should (string-prefix-p "emacs-context:test-daemon:" copied))
+        (should-not (string-match-p "```emacs-context" copied))))))
 
 (ert-deftest llm-context-test-region-lines-end-at-bol ()
   (with-temp-buffer
@@ -65,8 +99,8 @@
       (cl-letf (((symbol-function 'kill-new)
                  (lambda (value &rest _) (setq copied value))))
         (llm-context-copy))
-      (should (string-prefix-p "emacs-context:" copied))
-      (should (string-match-p "```emacs-context" copied)))))
+      (should (string-prefix-p "emacs-context:none:" copied))
+      (should-not (string-match-p "```emacs-context" copied)))))
 
 (ert-deftest llm-context-test-org-source-block-context ()
   (let ((file (make-temp-file "llm-context-test" nil ".org")))
